@@ -1,0 +1,31 @@
+#+title: org-roam-contacts
+
+Manage your contacts in [[https://github.com/org-roam/org-roam][=org-roam=]]!
+
+* Install
+
+** [[https://github.com/doomemacs/doomemacs][Doom Emacs]]
+
+#+begin_org
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-roam-contacts
+  :recipe (:host github
+           :repo "cashpw/org-roam-contacts"))
+#+end_src
+
+#+begin_src emacs-lisp :tangle config.el
+(use-package! org-roam-contacts
+  :after org-roam)
+#+end_src
+#+end_org
+
+** Straight
+
+TODO
+
+* Usage
+
+We assume you're using the 'one node per file' =org-roam= pattern and that contacts are in separate files.
+
+- =org-roam-contacts-properties=: Get a list of properties
+- =org-roam-contacts-insert-birthday-reminders=: Set birthday reminders
