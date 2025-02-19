@@ -196,15 +196,16 @@ Does nothing if such a heading is absent."
                                  (format "<%%F %s>" repeater-interval)
                                "<%F>")
                              (or time (org-read-date nil t)))))
-    (org-roam-contacts--insert-top-level-heading-if-absent
-     org-roam-contacts--reminders-heading)
-    (org-roam-contacts--goto-heading org-roam-contacts--reminders-heading)
-    (org-insert-todo-subheading nil)
-    (insert reminder-text)
-    (org-entry-put nil "SCHEDULED" time-string)
-    (org-set-property
-     "CREATED_AT"
-     (format-time-string "[%Y-%m-%d %a %H:%M:%S]" (current-time)))))
+    (save-excursion
+      (org-roam-contacts--insert-top-level-heading-if-absent
+       org-roam-contacts--reminders-heading)
+      (org-roam-contacts--goto-heading org-roam-contacts--reminders-heading)
+      (org-insert-todo-subheading nil)
+      (insert reminder-text)
+      (org-set-property
+       "CREATED_AT"
+       (format-time-string "[%Y-%m-%d %a %H:%M:%S]" (current-time)))
+      (org-entry-put (point) "SCHEDULED" time-string))))
 
 (defun org-roam-contacts-file-p ()
   "Contacts files are roam files in a specific directory."
