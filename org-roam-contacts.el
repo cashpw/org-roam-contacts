@@ -27,15 +27,35 @@
   :tag "Contacts"
   :group 'org)
 
-(defcustom org-roam-contacts--tag "person"
+(defcustom org-roam-contacts-tag "contact"
   "`org-roam' tag which indicates a contact node."
   :type 'string
   :group 'org-roam-contacts)
+
+(defun org-roam-contacts--set-as-contact ()
+  "Set the current buffer as a contact."
+  (let ((filetags
+         (org-make-tag-string (org-extras-get-inbuffer-option "filetags"))))
+    (org-extras-set-inbuffer-option
+     "filetags"
+     (if filetags
+         (format "%s%s:" filetags org-roam-contacts-tag)
+       (format ":%s:" org-roam-contacts-tag)))))
 
 (defcustom org-roam-contacts--birthday-property "CONTACT_BIRTHDAY"
   "Property name for a contact's birthday, stored as an org time string."
   :type 'string
   :group 'org-roam-contacts)
+
+(defun org-roam-contacts-set-birthday (time)
+  (interactive (list (org-read-date nil t nil "Birthday: ")))
+  (save-excursion
+    (org-roam-contacts--set-as-contact)
+    (goto-char (point-min))
+    (org-set-property
+     org-roam-contacts--birthday-property
+     (with-temp-buffer
+       (org-insert-timestamp time nil t)))))
 
 (defcustom org-roam-contacts--email-property "CONTACT_EMAILS"
   "Property name for a contact's email addresses.
@@ -102,16 +122,15 @@ The %s will be replaced with the contact's name."
   "Return time string for the next annual recurrence of TIME."
   (if (not (time-less-p time (current-time)))
       time
-    (cl-destructuring-bind
-        (seconds
-         minutes
-         hours
-         days
-         months
-         years
-         day-of-week
-         daylight-savings-time-p
-         utc-offset)
+    (cl-destructuring-bind (seconds
+                            minutes
+                            hours
+                            days
+                            months
+                            years
+                            day-of-week
+                            daylight-savings-time-p
+                            utc-offset)
         (decode-time time)
       (let* ((current-year (nth 5 (decode-time (current-time))))
              (next-year (1+ current-year)))
@@ -211,7 +230,7 @@ Does nothing if such a heading is absent."
   "Contacts files are roam files in a specific directory."
   (and (org-roam-file-p)
        (member
-        org-roam-contacts--tag (org-extras-filetags-in-buffer (buffer-name)))))
+        org-roam-contacts-tag (org-extras-get-inbuffer-option "filetags"))))
 
 (defun org-roam-contacts--get-birthday-time ()
   "Get emacs time representation of the contact's birthday."
@@ -224,30 +243,33 @@ Does nothing if such a heading is absent."
 1. Annually on the person's birthday
 2. Annually ADVANCE-NOTICE-DAYS before the person's birthday"
   (interactive "nAdvance notice days: ")
-  (when (and (org-roam-contacts-file-p)
-             (org-roam-contacts--has-property-p
-              org-roam-contacts--birthday-property))
-    (let* ((birth-time (org-roam-contacts--get-birthday-time))
-           (contact-name (org-roam-contacts--get-name))
-           (birthday-heading-text
-            (format org-roam-contacts--birthday-reminder-heading contact-name))
-           (upcoming-birthday-heading-text
-            (format org-roam-contacts--birthday-advanced-reminder-heading
-                    contact-name advance-notice-days)))
-      (unless (org-find-exact-headline-in-buffer upcoming-birthday-heading-text)
-        (let* ((reminder-time
-                (org-roam-contacts--get-next-annual-time
-                 (time-subtract
-                  birth-time (days-to-time advance-notice-days)))))
-          (org-roam-contacts-insert-reminder upcoming-birthday-heading-text
-                                             reminder-time
-                                             "++1y")))
-      (unless (org-find-exact-headline-in-buffer birthday-heading-text)
-        (let* ((reminder-time
-                (org-roam-contacts--get-next-annual-time birth-time)))
-          (org-roam-contacts-insert-reminder birthday-heading-text
-                                             reminder-time
-                                             "++1y"))))))
+  (unless (org-roam-contacts-file-p)
+    (error "This buffer isn't a contact."))
+  (unless (org-roam-contacts--has-property-p
+           org-roam-contacts--birthday-property)
+    (error
+     "This buffer doesn't have a valid %s"
+     org-roam-contacts--birthday-property))
+  (let* ((birth-time (org-roam-contacts--get-birthday-time))
+         (contact-name (org-roam-contacts--get-name))
+         (birthday-heading-text
+          (format org-roam-contacts--birthday-reminder-heading contact-name))
+         (upcoming-birthday-heading-text
+          (format org-roam-contacts--birthday-advanced-reminder-heading
+                  contact-name advance-notice-days)))
+    (unless (org-find-exact-headline-in-buffer upcoming-birthday-heading-text)
+      (let* ((reminder-time
+              (org-roam-contacts--get-next-annual-time
+               (time-subtract birth-time (days-to-time advance-notice-days)))))
+        (org-roam-contacts-insert-reminder upcoming-birthday-heading-text
+                                           reminder-time
+                                           "++1y")))
+    (unless (org-find-exact-headline-in-buffer birthday-heading-text)
+      (let* ((reminder-time
+              (org-roam-contacts--get-next-annual-time birth-time)))
+        (org-roam-contacts-insert-reminder birthday-heading-text
+                                           reminder-time
+                                           "++1y")))))
 
 (defun org-roam-contacts--get-name (&optional path)
   "Return name of contact at PATH.
